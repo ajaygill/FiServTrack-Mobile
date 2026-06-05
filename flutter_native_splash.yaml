@@ -1,0 +1,20 @@
+flutter_native_splash:
+  android: true
+  ios: true
+
+  # Light theme splash
+  color: "#FFFFFF"
+  image: "assets/icons/transparent.png"
+
+  # Dark theme splash
+  color_dark: "#09090B"
+  image_dark: "assets/icons/transparent.png"
+
+  android_gravity: center
+
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#09090B"
+    image: "assets/icons/transparent.png"
+    image_dark: "assets/icons/transparent.png"
+    android_gravity: center

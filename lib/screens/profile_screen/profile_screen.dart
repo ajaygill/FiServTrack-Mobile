@@ -31,25 +31,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Stack(
         children: [
           // ── 1. MAIN CONTENT ──
-          SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 120), // Clear bottom nav
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                _buildStatStrip(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 120), // Clear bottom nav
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildStatStrip(),
 
-                _buildSectionTitle(context, "Bank Accounts", "Manage"),
-                _buildBankItem(context, "🏦", "HDFC Bank", "Savings •••• 4821 · Connected", "₹4,82,000"),
-                _buildBankItem(context, "🏛", "SBI Bank", "Savings •••• 9933 · Connected", "₹1,12,400"),
-                _buildAddBankButton(context),
+                      _buildSectionTitle(context, "Bank Accounts", "Manage"),
+                      _buildBankItem(context, "🏦", "HDFC Bank", "Savings •••• 4821 · Connected", "₹4,82,000"),
+                      _buildBankItem(context, "🏛", "SBI Bank", "Savings •••• 9933 · Connected", "₹1,12,400"),
+                      _buildAddBankButton(context),
 
-                _buildSectionTitle(context, "Asset Vault", "View All →"),
-                _buildAssetItem(context, "🚗", "Honda City 2021", "Health 72% · Warranty: 8 mo left", "Good", AppColors.green, AppColors.greenBg),
-                _buildAssetItem(context, "❄️", "Samsung 1.5T AC", "Service due · Warranty expired", "Alert", AppColors.red, AppColors.redBg),
-              ],
-            ),
+                      _buildSectionTitle(context, "Asset Vault", "View All"),
+                      _buildAssetItem(context, "🚗", "Honda City 2021", "Health 72% · Warranty: 8 mo left", "Good", AppColors.green, AppColors.greenBg),
+                      _buildAssetItem(context, "❄️", "Samsung 1.5T AC", "Service due · Warranty expired", "Alert", AppColors.red, AppColors.redBg),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
           // ── 2. DIMMING OVERLAY WITH GLASSMORPHISM ──
@@ -220,8 +227,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildPill("⭐ Premium", AppColors.gold, AppColors.goldBg, AppColors.goldBorder),
-                      const SizedBox(width: 8),
                       _buildPill("✓ KYC Verified", AppColors.green, AppColors.greenBg, null),
                     ],
                   )
@@ -312,7 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title,
             style: const TextStyle(
               color: AppColors.ink,
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -329,7 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               action,
               style: const TextStyle(
                 color: AppColors.brandMid,
-                fontSize: 11,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -799,6 +804,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.red,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: EdgeInsets.symmetric(horizontal: 12.0)
               ),
               child: const Text("Sign Out", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             ),

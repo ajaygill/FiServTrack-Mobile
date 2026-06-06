@@ -1,3 +1,4 @@
+import 'package:fiservtrack/screens/auth/forgot_password_screen.dart';
 import 'package:fiservtrack/screens/auth/sign_up_screen.dart';
 import 'package:fiservtrack/screens/splash/splash_screen.dart';
 import 'package:fiservtrack/widgets/bottom_nav_bar/bottom_nav_bar.dart';
@@ -122,7 +123,12 @@ class _SignInScreenState extends State<SignInScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Handle forgot password
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
                     },
                     style: TextButton.styleFrom(
                       padding:

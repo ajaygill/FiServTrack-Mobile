@@ -188,37 +188,44 @@ class _LiabilitiesScreenState extends State<LiabilitiesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.surface,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(
-              activeLoansCount: _loans.length,
-              creditCardsCount: _cards.length,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Header(
+            activeLoansCount: _loans.length,
+            creditCardsCount: _cards.length,
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 16),
+                  _TotalCard(
+                    totalOutstanding: _formatCurrency(totalOutstanding),
+                    monthlyEMI: _formatCurrency(totalEMI),
+                    debtToIncomeRatio: '27.1%',
+                  ),
+                  _SectionHeader(
+                    title: 'Active Loans',
+                    action: '+ Add Loan',
+                    onActionTap: () => _showAddLoanSheet(context),
+                  ),
+                  for (final l in _loans) _LoanCard(data: l),
+                  _SectionHeader(
+                    title: 'Credit Cards',
+                    action: '+ Add Card',
+                    onActionTap: () => _showAddCardSheet(context),
+                  ),
+                  for (final c in _cards) _CCCard(data: c),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _TotalCard(
-              totalOutstanding: _formatCurrency(totalOutstanding),
-              monthlyEMI: _formatCurrency(totalEMI),
-              debtToIncomeRatio: '27.1%',
-            ),
-            _SectionHeader(
-              title: 'Active Loans',
-              action: '+ Add Loan',
-              onActionTap: () => _showAddLoanSheet(context),
-            ),
-            for (final l in _loans) _LoanCard(data: l),
-            _SectionHeader(
-              title: 'Credit Cards',
-              action: '+ Add Card',
-              onActionTap: () => _showAddCardSheet(context),
-            ),
-            for (final c in _cards) _CCCard(data: c),
-            const SizedBox(height: 8),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -959,7 +966,7 @@ class _SectionHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: const TextStyle(
-            color: AppColors.ink, fontSize: 15,
+            color: AppColors.ink, fontSize: 16,
             fontWeight: FontWeight.w800, letterSpacing: -0.3,
           )),
           Material(
@@ -975,7 +982,7 @@ class _SectionHeader extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFB8D0EC), width: 1.5),
                 ),
                 child: Text(action, style: const TextStyle(
-                  color: AppColors.brandMid, fontSize: 11, fontWeight: FontWeight.w700,
+                  color: AppColors.brandMid, fontSize: 12, fontWeight: FontWeight.w700,
                 )),
               ),
             ),

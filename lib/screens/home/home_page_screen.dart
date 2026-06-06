@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:fiservtrack/screens/notifications/notifications_screen.dart';
 import 'package:fiservtrack/screens/transactions/transactions_screen.dart';
 import 'package:fiservtrack/themes/app_color.dart';
 import 'package:flutter/material.dart';
@@ -9,23 +10,33 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final greeting = _getGreeting();
+
     return Scaffold(
       backgroundColor: AppColors.surface, // App body background matching --surface
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 120), // Padding for BottomNav
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            SizedBox(height: size.height * 0.025),
-
-            _buildBentoGrid(context),
-            SizedBox(height: size.height * 0.025),
-
-            _buildRecentSection(context),
-          ],
-        ),
+      body: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            delegate: _HomeHeaderDelegate(
+              topPadding: topPadding,
+              greeting: greeting,
+            ),
+            pinned: true,
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: 120), // Padding for BottomNav
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                SizedBox(height: size.height * 0.025),
+                _buildBentoGrid(context),
+                SizedBox(height: size.height * 0.025),
+                _buildRecentSection(context),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -42,48 +53,81 @@ class HomeScreen extends StatelessWidget {
       return "Good night 🌙";
     }
   }
+}
 
-  Widget _buildHeader(BuildContext context) {
+class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double topPadding;
+  final String greeting;
+
+  _HomeHeaderDelegate({
+    required this.topPadding,
+    required this.greeting,
+  });
+
+  @override
+  double get maxExtent => topPadding + 395.0;
+
+  @override
+  double get minExtent => topPadding + 250.0;
+
+  @override
+  bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
+    return oldDelegate.topPadding != topPadding || oldDelegate.greeting != greeting;
+  }
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final size = MediaQuery.of(context).size;
-    final greeting = _getGreeting();
+    final currentHeight = (maxExtent - shrinkOffset).clamp(minExtent, maxExtent);
+    final t = ((shrinkOffset) / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final double fadeOpacity = (1.0 - t * 1.5).clamp(0.0, 1.0);
+
     return Container(
-      decoration: const BoxDecoration(
+      height: currentHeight,
+      decoration: BoxDecoration(
         gradient: AppColors.brandGradient,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
+          bottomLeft: Radius.circular(32 * (1.0 - t)),
+          bottomRight: Radius.circular(32 * (1.0 - t)),
         ),
       ),
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
           // Decorative Circle Top Right
           Positioned(
-            top: -70,
+            top: -70 - (30 * t),
             right: -60,
-            child: Container(
-              width: size.width * 0.55,
-              height: size.width * 0.55,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Colors.white.withOpacity(0.08), Colors.transparent],
-                  stops: const [0.0, 0.7],
+            child: Opacity(
+              opacity: (1.0 - t).clamp(0.0, 1.0),
+              child: Container(
+                width: size.width * 0.55,
+                height: size.width * 0.55,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Colors.white.withOpacity(0.08), Colors.transparent],
+                    stops: const [0.0, 0.7],
+                  ),
                 ),
               ),
             ),
           ),
           // Decorative Circle Bottom Left
           Positioned(
-            bottom: -40,
+            bottom: -40 + (100 * t),
             left: -40,
-            child: Container(
-              width: size.width * 0.4,
-              height: size.width * 0.4,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [AppColors.brandLight.withOpacity(0.3), Colors.transparent],
-                  stops: const [0.0, 0.7],
+            child: Opacity(
+              opacity: (1.0 - t).clamp(0.0, 1.0),
+              child: Container(
+                width: size.width * 0.4,
+                height: size.width * 0.4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [AppColors.brandLight.withOpacity(0.3), Colors.transparent],
+                    stops: const [0.0, 0.7],
+                  ),
                 ),
               ),
             ),
@@ -91,195 +135,94 @@ class HomeScreen extends StatelessWidget {
 
           SafeArea(
             bottom: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, size.height * 0.02, 20, size.height * 0.03),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              greeting,
-                              style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: size.height * 0.015,
-                                  fontWeight: FontWeight.w500
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              "Arjun Mehta",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: size.height * 0.024,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Row(
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Row
+                    SizedBox(
+                      height: 65,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Container(
-                            width: size.height * 0.045,
-                            height: size.height * 0.045,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withOpacity(0.15)),
-                            ),
-                            child: Icon(Icons.notifications_none_rounded, color: Colors.white70, size: size.height * 0.025),
-                          ),
-                          SizedBox(width: size.width * 0.02),
-                          Container(
-                            width: size.height * 0.05,
-                            height: size.height * 0.05,
-                            decoration: BoxDecoration(
-                                gradient: AppColors.goldGradient,
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  )
-                                ]
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              "A",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: size.height * 0.02),
-                            ),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
-                  SizedBox(height: size.height * 0.025),
-
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: size.height * 0.025),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Colors.white.withOpacity(0.18)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Total Net Worth".toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: size.height * 0.013,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                             FittedBox(
-                               fit: BoxFit.scaleDown,
-                               alignment: Alignment.centerLeft,
-                               child: Row(
-                                 crossAxisAlignment: CrossAxisAlignment.baseline,
-                                 textBaseline: TextBaseline.alphabetic,
-                                 children: [
-                                   Text(
-                                     "₹",
-                                     style: TextStyle(color: Colors.white70, fontSize: size.height * 0.025, fontWeight: FontWeight.w600),
-                                   ),
-                                   Text(
-                                     "28,47,320",
-                                     style: TextStyle(
-                                       color: Colors.white,
-                                       fontSize: size.height * 0.045,
-                                       fontWeight: FontWeight.w900,
-                                       letterSpacing: -2.0,
-                                       height: 1.0,
-                                     ),
-                                   ),
-                                 ],
-                                ),
-                             ),
-                            SizedBox(height: size.height * 0.015),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: size.height * 0.022,
-                                          height: size.height * 0.022,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.greenLight.withOpacity(0.25),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Icon(Icons.arrow_upward_rounded, color: AppColors.greenLight, size: size.height * 0.014),
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Text("3.2% this month", style: TextStyle(color: AppColors.greenLight, fontSize: size.height * 0.014, fontWeight: FontWeight.w700)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      "vs ₹27,55,000 last month",
-                                      style: TextStyle(color: Colors.white60, fontSize: size.height * 0.013, fontWeight: FontWeight.w500),
-                                    )
-                                  ],
+                                Text(
+                                  greeting,
+                                  style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: size.height * 0.015,
+                                      fontWeight: FontWeight.w500
+                                  ),
                                 ),
-                                _buildSparkline(size),
+                                const SizedBox(height: 1),
+                                Text(
+                                  "Arjun Mehta",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: size.height * 0.024,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.4,
+                                  ),
+                                ),
                               ],
-                            )
-                          ],
-                        ),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const NotificationsScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: size.height * 0.045,
+                                  height: size.height * 0.045,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                                  ),
+                                  child: Icon(Icons.notifications_none_rounded, color: Colors.white70, size: size.height * 0.025),
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
                       ),
                     ),
-                  ),
-                  SizedBox(height: size.height * 0.018),
 
-                  Row(
-                    children: [
-                      Expanded(child: _buildFlowCard(
-                          context: context,
-                          title: "Monthly Income",
-                          amount: "₹1,20,000",
-                          subtitle: "Salary + Freelance",
-                          icon: Icons.arrow_outward_rounded,
-                          color: AppColors.greenLight,
-                          pillText: "+12%",
-                          iconBg: AppColors.greenLight.withOpacity(0.2),
-                          pillBg: AppColors.greenLight.withOpacity(0.2)
-                      )),
-                      const SizedBox(width: 10),
-                      Expanded(child: _buildFlowCard(
-                          context: context,
-                          title: "Monthly Spend",
-                          amount: "₹68,240",
-                          subtitle: "of income",
-                          icon: Icons.arrow_downward_rounded,
-                          color: AppColors.redLight,
-                          pillText: "57%",
-                          iconBg: AppColors.redLight.withOpacity(0.2),
-                          pillBg: AppColors.redLight.withOpacity(0.2)
-                      )),
-                    ],
-                  )
-                ],
+                    const SizedBox(height: 10),
+                    _buildNetWorthCard(context, size),
+
+                    // Collapsible Content
+                    if (fadeOpacity > 0)
+                      Opacity(
+                        opacity: fadeOpacity,
+                        child: Transform.translate(
+                          offset: Offset(0, -20 * t),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 12),
+                              _buildFlowCards(context, size),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -288,8 +231,96 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildNetWorthCard(BuildContext context, Size size) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: size.height * 0.023),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Total Net Worth".toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: size.height * 0.013,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      "₹",
+                      style: TextStyle(color: Colors.white70, fontSize: size.height * 0.025, fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      "28,47,320",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: size.height * 0.045,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -2.0,
+                        height: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: size.height * 0.015),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: size.height * 0.022,
+                            height: size.height * 0.022,
+                            decoration: BoxDecoration(
+                              color: AppColors.greenLight.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(Icons.arrow_upward_rounded, color: AppColors.greenLight, size: size.height * 0.014),
+                          ),
+                          const SizedBox(width: 5),
+                          Text("3.2% this month", style: TextStyle(color: AppColors.greenLight, fontSize: size.height * 0.014, fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "vs ₹27,55,000 last month",
+                        style: TextStyle(color: Colors.white60, fontSize: size.height * 0.013, fontWeight: FontWeight.w500),
+                      )
+                    ],
+                  ),
+                  _buildSparkline(size),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSparkline(Size size) {
-    // Exact height ratios from your HTML CSS
     List<double> heights = [0.35, 0.50, 0.42, 0.68, 0.55, 1.0];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -299,7 +330,7 @@ class HomeScreen extends StatelessWidget {
         return Container(
           margin: const EdgeInsets.only(left: 3),
           width: size.width * 0.012,
-          height: (size.height * 0.032) * h, // Maps to the 24px height max
+          height: (size.height * 0.032) * h,
           decoration: BoxDecoration(
             color: isMax
                 ? Colors.white.withOpacity(0.8)
@@ -311,6 +342,36 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildFlowCards(BuildContext context, Size size) {
+    return Row(
+      children: [
+        Expanded(child: _buildFlowCard(
+            context: context,
+            title: "Monthly Income",
+            amount: "₹1,20,000",
+            subtitle: "Salary + Freelance",
+            icon: Icons.arrow_outward_rounded,
+            color: AppColors.greenLight,
+            pillText: "+12%",
+            iconBg: AppColors.greenLight.withOpacity(0.2),
+            pillBg: AppColors.greenLight.withOpacity(0.2)
+        )),
+        const SizedBox(width: 10),
+        Expanded(child: _buildFlowCard(
+            context: context,
+            title: "Monthly Spend",
+            amount: "₹68,240",
+            subtitle: "of income",
+            icon: Icons.arrow_downward_rounded,
+            color: AppColors.redLight,
+            pillText: "57%",
+            iconBg: AppColors.redLight.withOpacity(0.2),
+            pillBg: AppColors.redLight.withOpacity(0.2)
+        )),
+      ],
+    );
+  }
+
   Widget _buildFlowCard({
     required BuildContext context,
     required String title, required String amount, required String subtitle,
@@ -319,7 +380,7 @@ class HomeScreen extends StatelessWidget {
   }) {
     final size = MediaQuery.of(context).size;
     return Container(
-      padding: const EdgeInsets.all(13), // 13px 14px in HTML
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.09),
         borderRadius: BorderRadius.circular(18),
@@ -358,6 +419,7 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
 
   Widget _buildBentoGrid(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -476,14 +538,14 @@ class HomeScreen extends StatelessWidget {
             value,
             style: TextStyle(
               color: valueColor,
-              fontSize: size.height * 0.03,
+              fontSize: size.height * 0.04,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
           // Progress bar only on savings card
           if (showProgress) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Container(
               height: 5,
               width: double.infinity,
@@ -504,6 +566,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 4),
           ],
           // Spacer pushes subtext to the bottom on both cards equally
           const Spacer(),
@@ -539,7 +602,7 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
                 child: const Text(
-                  "View All →",
+                  "View All",
                   style: TextStyle(
                     color: AppColors.brandMid,
                     fontSize: 16,
@@ -552,7 +615,9 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _buildTransactionRow("🛒", AppColors.redBg, "Zepto Groceries", "Food & Groceries", "−₹1,240", "Today, 2pm", isDebit: true),
           _buildTransactionRow("💰", AppColors.greenBg, "Salary Credit", "Income · TCS", "+₹1,00,000", "Mar 1", isDebit: false),
-          _buildTransactionRow("⛽", AppColors.brandPale, "HP Petrol Station", "Transport", "−₹2,100", "Mar 5", isDebit: true, isLast: true),
+          _buildTransactionRow("⛽", AppColors.brandPale, "HP Petrol Station", "Transport", "−₹2,100", "Mar 5", isDebit: true),
+          _buildTransactionRow("☕", AppColors.goldBg, "Starbucks Coffee", "Food & Dining", "−₹450", "Mar 4", isDebit: true),
+          _buildTransactionRow("🎬", AppColors.brandPale, "BookMyShow Movie", "Entertainment", "−₹950", "Mar 3", isDebit: true, isLast: true),
         ],
       ),
     );
@@ -603,4 +668,3 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-}

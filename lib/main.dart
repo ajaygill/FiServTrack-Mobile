@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'package:fiservtrack/screens/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:fiservtrack/themes/app_theme.dart';
-import 'package:fiservtrack/screens/auth/welcome_screen.dart';
 import 'package:fiservtrack/provider/theme_provider/theme_provider.dart';
 
 void main() async {
@@ -48,7 +48,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       title: 'FiservTrack',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const WelcomeScreen(),
+      home: const SplashScreen(),
     );
   }
 }

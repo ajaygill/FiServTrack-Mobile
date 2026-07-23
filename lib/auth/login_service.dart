@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/encryption/payload_encryption.dart';
 import '../core/session/app_session.dart';
@@ -32,8 +33,17 @@ class LoginService {
     );
 
     if (response.statusCode == 200) {
-      debugPrint("${response}");
-      return LoginResponseModel.fromJson(jsonDecode(response.body));
+      debugPrint("$response");
+      final loginResponse = LoginResponseModel.fromJson(
+        jsonDecode(response.body),
+      );
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString(
+        "access_token",
+        loginResponse.token, // adjust according to your model
+      );
+      return loginResponse;
     }
 
     throw Exception("Login failed");

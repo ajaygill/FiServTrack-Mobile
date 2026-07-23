@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:fiservtrack/auth/login_provider.dart';
+import 'package:fiservtrack/home/home_provider.dart';
+import 'package:fiservtrack/loan_types/loan_types_provider.dart';
 import 'package:fiservtrack/public_key/public_key_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -59,6 +61,8 @@ class _AppState extends State<App> {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => PublicKeyProvider()),
         ChangeNotifierProvider(create: (_) => LoginProvider()),
+        ChangeNotifierProvider(create: (_) => HomeProvider()),
+        ChangeNotifierProvider(create: (_) => LoanTypesProvider()),
 
         // Add future providers here
       ],

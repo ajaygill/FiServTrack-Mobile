@@ -1,5 +1,9 @@
+import 'package:fiservtrack/loan_types/loan_types_provider.dart';
 import 'package:fiservtrack/themes/app_color.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../loan_types/loan_types_model.dart';
 
 // ── Models ─────────────────────────────────────────────────────────────────────
 class _LoanData {
@@ -75,7 +79,12 @@ InputDecoration _inputDeco(String label, String hint) {
   return InputDecoration(
     labelText: label,
     hintText: hint,
-    labelStyle: const TextStyle(color: AppColors.inkSoft, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+    labelStyle: const TextStyle(
+      color: AppColors.inkSoft,
+      fontSize: 10,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.5,
+    ),
     hintStyle: const TextStyle(color: AppColors.inkMuted, fontSize: 12),
     filled: true,
     fillColor: AppColors.surface,
@@ -169,6 +178,15 @@ class _LiabilitiesScreenState extends State<LiabilitiesScreen> {
       usedAmount: 38500.0,
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      Provider.of<LoanTypesProvider>(context, listen: false).getLoanTypes();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +287,8 @@ class _LiabilitiesScreenState extends State<LiabilitiesScreen> {
 class _AddLoanBottomSheet extends StatefulWidget {
   final Function(_LoanData) onLoanAdded;
 
-  const _AddLoanBottomSheet({Key? key, required this.onLoanAdded}) : super(key: key);
+  const _AddLoanBottomSheet({Key? key, required this.onLoanAdded})
+    : super(key: key);
 
   @override
   State<_AddLoanBottomSheet> createState() => _AddLoanBottomSheetState();
@@ -283,7 +302,8 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
   final _emiCtrl = TextEditingController();
   final _endsCtrl = TextEditingController();
 
-  String _selectedCategory = '🚗';
+  // String _selectedCategory = '🚗';
+  LoanTypesModel? _selectedCategory;
   double _paidPercent = 0.0;
 
   @override
@@ -296,12 +316,28 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
     super.dispose();
   }
 
-  Widget _categoryOption(String emoji, String label) {
-    final isSel = _selectedCategory == emoji;
+  String getCategoryIcon(String? name) {
+    switch (name?.toLowerCase()) {
+      case "car":
+        return "🚗";
+      case "home":
+        return "🏠";
+      case "study":
+      case "education":
+        return "🎓";
+      case "personal":
+        return "🛍";
+      default:
+        return "📄";
+    }
+  }
+
+  Widget _categoryOption(LoanTypesModel category) {
+    final isSel = _selectedCategory?.id == category.id;
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedCategory = emoji;
+          _selectedCategory = category;
         });
       },
       child: Column(
@@ -318,11 +354,14 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
               ),
             ),
             alignment: Alignment.center,
-            child: Text(emoji, style: const TextStyle(fontSize: 22)),
+            child: Text(
+              getCategoryIcon(category.name),
+              style: const TextStyle(fontSize: 22),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
-            label,
+            category.name ?? "",
             style: TextStyle(
               fontSize: 10,
               fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
@@ -337,7 +376,9 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -378,30 +419,52 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
                 const SizedBox(height: 20),
 
                 // Category Selection
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _categoryOption('🚗', 'Car'),
-                    _categoryOption('🏠', 'Home'),
-                    _categoryOption('🎓', 'Study'),
-                    _categoryOption('🛍', 'Personal'),
-                  ],
+                Consumer<LoanTypesProvider>(
+                  builder: (context, provider, child) {
+                    return Wrap(
+                      spacing: 20,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: provider.loanTypes
+                          .map((category) => _categoryOption(category))
+                          .toList(),
+                    );
+                  },
                 ),
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.spaceAround,
+                //   children: [
+                //     _categoryOption('🚗', 'Car'),
+                //     _categoryOption('🏠', 'Home'),
+                //     _categoryOption('🎓', 'Study'),
+                //     _categoryOption('🛍', 'Personal'),
+                //   ],
+                // ),
                 const SizedBox(height: 24),
 
                 // Form Inputs
                 TextFormField(
                   controller: _titleCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: _inputDeco("LOAN NAME", "e.g. Car Loan, Education Loan"),
-                  validator: (val) => val == null || val.trim().isEmpty ? "Name is required" : null,
+                  decoration: _inputDeco(
+                    "LOAN NAME",
+                    "e.g. Car Loan, Education Loan",
+                  ),
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? "Name is required"
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _bankCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: _inputDeco("LENDER / BANK", "e.g. HDFC Bank, SBI"),
-                  validator: (val) => val == null || val.trim().isEmpty ? "Bank is required" : null,
+                  decoration: _inputDeco(
+                    "LENDER / BANK",
+                    "e.g. HDFC Bank, SBI",
+                  ),
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? "Bank is required"
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -412,7 +475,8 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
                         keyboardType: TextInputType.number,
                         decoration: _inputDeco("OUTSTANDING", "e.g. 500000"),
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return "Required";
+                          if (val == null || val.trim().isEmpty)
+                            return "Required";
                           if (double.tryParse(val) == null) return "Invalid";
                           return null;
                         },
@@ -425,7 +489,8 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
                         keyboardType: TextInputType.number,
                         decoration: _inputDeco("MONTHLY EMI", "e.g. 12400"),
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return "Required";
+                          if (val == null || val.trim().isEmpty)
+                            return "Required";
                           if (double.tryParse(val) == null) return "Invalid";
                           return null;
                         },
@@ -437,7 +502,9 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
                 TextFormField(
                   controller: _endsCtrl,
                   decoration: _inputDeco("PAYOFF DATE", "e.g. Sep 2028"),
-                  validator: (val) => val == null || val.trim().isEmpty ? "Payoff date is required" : null,
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? "Payoff date is required"
+                      : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -519,21 +586,23 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
                         break;
                     }
 
-                    widget.onLoanAdded(_LoanData(
-                      emoji: _selectedCategory,
-                      emojiBg: emojiBg,
-                      title: _titleCtrl.text,
-                      bank: "${_bankCtrl.text} · Active",
-                      outstanding: _formatCurrency(outstanding),
-                      emi: _formatCurrency(emi),
-                      paid: "${_paidPercent.toInt()}%",
-                      ends: _endsCtrl.text,
-                      paidColor: paidColor,
-                      barColors: barColors,
-                      progress: _paidPercent / 100.0,
-                      outstandingAmount: outstanding,
-                      emiAmount: emi,
-                    ));
+                    widget.onLoanAdded(
+                      _LoanData(
+                        emoji: _selectedCategory!.name ?? "",
+                        emojiBg: emojiBg,
+                        title: _titleCtrl.text,
+                        bank: "${_bankCtrl.text} · Active",
+                        outstanding: _formatCurrency(outstanding),
+                        emi: _formatCurrency(emi),
+                        paid: "${_paidPercent.toInt()}%",
+                        ends: _endsCtrl.text,
+                        paidColor: paidColor,
+                        barColors: barColors,
+                        progress: _paidPercent / 100.0,
+                        outstandingAmount: outstanding,
+                        emiAmount: emi,
+                      ),
+                    );
 
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -546,7 +615,9 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brand,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     "Add Loan Account",
@@ -570,7 +641,8 @@ class _AddLoanBottomSheetState extends State<_AddLoanBottomSheet> {
 class _AddCardBottomSheet extends StatefulWidget {
   final Function(_CardData) onCardAdded;
 
-  const _AddCardBottomSheet({Key? key, required this.onCardAdded}) : super(key: key);
+  const _AddCardBottomSheet({Key? key, required this.onCardAdded})
+    : super(key: key);
 
   @override
   State<_AddCardBottomSheet> createState() => _AddCardBottomSheetState();
@@ -601,7 +673,9 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -645,8 +719,13 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                 TextFormField(
                   controller: _nameCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: _inputDeco("CARD NAME / BANK", "e.g. HDFC Regalia, ICICI Rubyx"),
-                  validator: (val) => val == null || val.trim().isEmpty ? "Card Name is required" : null,
+                  decoration: _inputDeco(
+                    "CARD NAME / BANK",
+                    "e.g. HDFC Regalia, ICICI Rubyx",
+                  ),
+                  validator: (val) => val == null || val.trim().isEmpty
+                      ? "Card Name is required"
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -656,7 +735,8 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                   decoration: _inputDeco("LAST 4 DIGITS", "e.g. 1234"),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) return "Required";
-                    if (val.length != 4 || int.tryParse(val) == null) return "Must be exactly 4 digits";
+                    if (val.length != 4 || int.tryParse(val) == null)
+                      return "Must be exactly 4 digits";
                     return null;
                   },
                 ),
@@ -669,7 +749,8 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                         keyboardType: TextInputType.number,
                         decoration: _inputDeco("LIMIT", "e.g. 300000"),
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return "Required";
+                          if (val == null || val.trim().isEmpty)
+                            return "Required";
                           if (double.tryParse(val) == null) return "Invalid";
                           return null;
                         },
@@ -682,7 +763,8 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                         keyboardType: TextInputType.number,
                         decoration: _inputDeco("AMOUNT USED", "e.g. 48200"),
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return "Required";
+                          if (val == null || val.trim().isEmpty)
+                            return "Required";
                           final amt = double.tryParse(val);
                           if (amt == null) return "Invalid";
                           if (_limitCtrl.text.isNotEmpty) {
@@ -702,7 +784,9 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                       child: TextFormField(
                         controller: _dueDateCtrl,
                         decoration: _inputDeco("DUE DATE", "e.g. Mar 15"),
-                        validator: (val) => val == null || val.trim().isEmpty ? "Required" : null,
+                        validator: (val) => val == null || val.trim().isEmpty
+                            ? "Required"
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -712,7 +796,8 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                         keyboardType: TextInputType.number,
                         decoration: _inputDeco("MIN DUE", "e.g. 2400"),
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return "Required";
+                          if (val == null || val.trim().isEmpty)
+                            return "Required";
                           if (double.tryParse(val) == null) return "Invalid";
                           return null;
                         },
@@ -723,7 +808,10 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _rewardsCtrl,
-                  decoration: _inputDeco("REWARDS POINTS", "e.g. 4820 (optional)"),
+                  decoration: _inputDeco(
+                    "REWARDS POINTS",
+                    "e.g. 4820 (optional)",
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -736,24 +824,27 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                     final minDue = double.parse(_minDueCtrl.text);
 
                     final double usageFactor = limit > 0 ? used / limit : 0.0;
-                    final String usedPct = "(${((used / limit) * 100).toInt()}%)";
+                    final String usedPct =
+                        "(${((used / limit) * 100).toInt()}%)";
                     final String rewards = _rewardsCtrl.text.trim().isNotEmpty
                         ? "${_rewardsCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')} pts"
                         : "0 pts";
 
-                    widget.onCardAdded(_CardData(
-                      name: _nameCtrl.text,
-                      number: "•••• •••• •••• ${_numberCtrl.text}",
-                      limit: _formatCurrency(limit),
-                      used: _formatCurrency(used),
-                      usedPct: usedPct,
-                      dueDate: _dueDateCtrl.text,
-                      minDue: _formatCurrency(minDue),
-                      rewards: rewards,
-                      usageFactor: usageFactor,
-                      limitAmount: limit,
-                      usedAmount: used,
-                    ));
+                    widget.onCardAdded(
+                      _CardData(
+                        name: _nameCtrl.text,
+                        number: "•••• •••• •••• ${_numberCtrl.text}",
+                        limit: _formatCurrency(limit),
+                        used: _formatCurrency(used),
+                        usedPct: usedPct,
+                        dueDate: _dueDateCtrl.text,
+                        minDue: _formatCurrency(minDue),
+                        rewards: rewards,
+                        usageFactor: usageFactor,
+                        limitAmount: limit,
+                        usedAmount: used,
+                      ),
+                    );
 
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -766,7 +857,9 @@ class _AddCardBottomSheetState extends State<_AddCardBottomSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brand,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     "Add Credit Card",
@@ -813,44 +906,63 @@ class _Header extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
         ),
-        child: Stack(children: [
-          // Decorative radial glow
-          Positioned(
-            top: -70,
-            right: -50,
-            child: Container(
-              width: size.width * 0.5,
-              height: size.width * 0.5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Colors.white.withOpacity(0.08), Colors.transparent],
-                  stops: const [0.0, 0.7],
+        child: Stack(
+          children: [
+            // Decorative radial glow
+            Positioned(
+              top: -70,
+              right: -50,
+              child: Container(
+                width: size.width * 0.5,
+                height: size.width * 0.5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.08),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.7],
+                  ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, size.height * 0.02, 20, size.height * 0.03),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Liabilities', style: TextStyle(
-                    color: Colors.white, fontSize: size.height * 0.028,
-                    fontWeight: FontWeight.w900, letterSpacing: -0.5,
-                  )),
-                  const SizedBox(height: 4),
-                  Text('$activeLoansCount active loans · $creditCardsCount credit cards', style: TextStyle(
-                    color: Colors.white54, fontSize: size.height * 0.015,
-                    fontWeight: FontWeight.w500,
-                  )),
-                ],
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  size.height * 0.02,
+                  20,
+                  size.height * 0.03,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Liabilities',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: size.height * 0.028,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$activeLoansCount active loans · $creditCardsCount credit cards',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: size.height * 0.015,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -873,42 +985,78 @@ class _TotalCard extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: EdgeInsets.fromLTRB(20, size.height * 0.02, 20, size.height * 0.02),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        size.height * 0.02,
+        20,
+        size.height * 0.02,
+      ),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.cardBorder, width: 1.5),
         boxShadow: [
-          BoxShadow(color: AppColors.ink.withOpacity(0.07), blurRadius: 14, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: AppColors.ink.withOpacity(0.07),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('TOTAL OUTSTANDING', style: TextStyle(
-          color: AppColors.inkMuted, fontSize: size.height * 0.013,
-          fontWeight: FontWeight.w700, letterSpacing: 1.5,
-        )),
-        const SizedBox(height: 6),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(totalOutstanding, style: TextStyle(
-            color: AppColors.ink, fontSize: size.height * 0.04,
-            fontWeight: FontWeight.w900, letterSpacing: -1.5,
-          )),
-        ),
-        SizedBox(height: size.height * 0.02),
-        Container(height: 1, color: AppColors.divider),
-        SizedBox(height: size.height * 0.02),
-        IntrinsicHeight(
-          child: Row(children: [
-            _TotalStat(label: 'Monthly EMI', value: monthlyEMI, color: AppColors.ink),
-            _VSep(),
-            _TotalStat(label: 'Debt / Income', value: debtToIncomeRatio, color: AppColors.gold),
-            _VSep(),
-            const _TotalStat(label: 'Avg Payoff', value: '38 mo', color: AppColors.ink),
-          ]),
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TOTAL OUTSTANDING',
+            style: TextStyle(
+              color: AppColors.inkMuted,
+              fontSize: size.height * 0.013,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              totalOutstanding,
+              style: TextStyle(
+                color: AppColors.ink,
+                fontSize: size.height * 0.04,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1.5,
+              ),
+            ),
+          ),
+          SizedBox(height: size.height * 0.02),
+          Container(height: 1, color: AppColors.divider),
+          SizedBox(height: size.height * 0.02),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _TotalStat(
+                  label: 'Monthly EMI',
+                  value: monthlyEMI,
+                  color: AppColors.ink,
+                ),
+                _VSep(),
+                _TotalStat(
+                  label: 'Debt / Income',
+                  value: debtToIncomeRatio,
+                  color: AppColors.gold,
+                ),
+                _VSep(),
+                const _TotalStat(
+                  label: 'Avg Payoff',
+                  value: '38 mo',
+                  color: AppColors.ink,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -916,24 +1064,41 @@ class _TotalCard extends StatelessWidget {
 class _TotalStat extends StatelessWidget {
   final String label, value;
   final Color color;
-  const _TotalStat({required this.label, required this.value, required this.color});
+  const _TotalStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Expanded(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(
-          color: AppColors.inkMuted, fontSize: size.height * 0.012, fontWeight: FontWeight.w600,
-        )),
-        const SizedBox(height: 4),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(value, style: TextStyle(
-            color: color, fontSize: size.height * 0.018, fontWeight: FontWeight.w800,
-          )),
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.inkMuted,
+              fontSize: size.height * 0.012,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: size.height * 0.018,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -965,25 +1130,41 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(
-            color: AppColors.ink, fontSize: 16,
-            fontWeight: FontWeight.w800, letterSpacing: -0.3,
-          )),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+          ),
           Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
               onTap: onActionTap,
               child: Ink(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.brandPale,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFB8D0EC), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFFB8D0EC),
+                    width: 1.5,
+                  ),
                 ),
-                child: Text(action, style: const TextStyle(
-                  color: AppColors.brandMid, fontSize: 12, fontWeight: FontWeight.w700,
-                )),
+                child: Text(
+                  action,
+                  style: const TextStyle(
+                    color: AppColors.brandMid,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ),
@@ -1008,79 +1189,138 @@ class _LoanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.cardBorder, width: 1.5),
         boxShadow: [
-          BoxShadow(color: AppColors.ink.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: AppColors.ink.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
-      child: Column(children: [
-        // ── Top row ──
-        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: data.emojiBg,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            alignment: Alignment.center,
-            child: Text(data.emoji,
-                style: const TextStyle(fontSize: 22, fontFamilyFallback: ['Apple Color Emoji', 'Noto Color Emoji'])),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          // ── Top row ──
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(data.title, style: const TextStyle(
-                color: AppColors.ink, fontSize: 14, fontWeight: FontWeight.w800,
-              )),
-              const SizedBox(height: 2),
-              Text(data.bank, style: const TextStyle(
-                color: AppColors.inkSoft, fontSize: 11, fontWeight: FontWeight.w500,
-              )),
-            ],
-          )),
-          const SizedBox(width: 8),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(data.outstanding, style: const TextStyle(
-              color: AppColors.ink, fontSize: 15,
-              fontWeight: FontWeight.w900, letterSpacing: -0.4,
-            )),
-            const SizedBox(height: 2),
-            const Text('outstanding', style: TextStyle(
-              color: AppColors.inkMuted, fontSize: 10, fontWeight: FontWeight.w500,
-            )),
-          ]),
-        ]),
-
-        const SizedBox(height: 16),
-
-        // ── Progress bar ──
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: Container(
-            height: 6,
-            width: double.infinity,
-            color: AppColors.divider,
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: data.progress,
-              child: Container(
+              Container(
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: data.barColors),
+                  color: data.emojiBg,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  data.emoji,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontFamilyFallback: [
+                      'Apple Color Emoji',
+                      'Noto Color Emoji',
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      data.bank,
+                      style: const TextStyle(
+                        color: AppColors.inkSoft,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    data.outstanding,
+                    style: const TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'outstanding',
+                    style: TextStyle(
+                      color: AppColors.inkMuted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Progress bar ──
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: Container(
+              height: 6,
+              width: double.infinity,
+              color: AppColors.divider,
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: data.progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: data.barColors),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // ── Footer row ──
-        Row(children: [
-          _Stat(label: 'Monthly EMI', value: data.emi, color: AppColors.ink, align: CrossAxisAlignment.start),
-          _Stat(label: 'Paid', value: data.paid, color: data.paidColor, align: CrossAxisAlignment.center),
-          _Stat(label: 'Ends', value: data.ends, color: AppColors.ink, align: CrossAxisAlignment.end),
-        ]),
-      ]),
+          // ── Footer row ──
+          Row(
+            children: [
+              _Stat(
+                label: 'Monthly EMI',
+                value: data.emi,
+                color: AppColors.ink,
+                align: CrossAxisAlignment.start,
+              ),
+              _Stat(
+                label: 'Paid',
+                value: data.paid,
+                color: data.paidColor,
+                align: CrossAxisAlignment.center,
+              ),
+              _Stat(
+                label: 'Ends',
+                value: data.ends,
+                color: AppColors.ink,
+                align: CrossAxisAlignment.end,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1089,18 +1329,36 @@ class _Stat extends StatelessWidget {
   final String label, value;
   final Color color;
   final CrossAxisAlignment align;
-  const _Stat({required this.label, required this.value, required this.color, required this.align});
+  const _Stat({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.align,
+  });
   @override
   Widget build(BuildContext context) => Expanded(
-    child: Column(crossAxisAlignment: align, children: [
-      Text(label, style: const TextStyle(
-        color: AppColors.inkMuted, fontSize: 10, fontWeight: FontWeight.w600,
-      )),
-      const SizedBox(height: 3),
-      Text(value, style: TextStyle(
-        color: color, fontSize: 13, fontWeight: FontWeight.w800,
-      )),
-    ]),
+    child: Column(
+      crossAxisAlignment: align,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.inkMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
   );
 }
 
@@ -1118,128 +1376,178 @@ class _CCCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.brandDeep, AppColors.brandMid, AppColors.brandLight],
+            colors: [
+              AppColors.brandDeep,
+              AppColors.brandMid,
+              AppColors.brandLight,
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
-            BoxShadow(color: AppColors.brand.withOpacity(0.30), blurRadius: 20, offset: const Offset(0, 8)),
+            BoxShadow(
+              color: AppColors.brand.withOpacity(0.30),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        child: Stack(children: [
-          // Glow top-right
-          Positioned(
-            top: -45,
-            right: -45,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Colors.white.withOpacity(0.10), Colors.transparent],
-                  stops: const [0.0, 0.7],
+        child: Stack(
+          children: [
+            // Glow top-right
+            Positioned(
+              top: -45,
+              right: -45,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withOpacity(0.10),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.7],
+                  ),
                 ),
               ),
             ),
-          ),
-          // Glow bottom-left
-          Positioned(
-            bottom: -35,
-            left: -25,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [const Color(0xFF2471C8).withOpacity(0.28), Colors.transparent],
-                  stops: const [0.0, 0.7],
+            // Glow bottom-left
+            Positioned(
+              bottom: -35,
+              left: -25,
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF2471C8).withOpacity(0.28),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.7],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ── Content ──
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Name + chip
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // ── Content ──
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: Column(
+                // Name + chip
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(data.name, style: const TextStyle(
-                      color: Colors.white, fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    )),
-                    const SizedBox(height: 4),
-                    Text(data.number, style: const TextStyle(
-                      color: Colors.white54, fontSize: 11, letterSpacing: 2.0,
-                    )),
-                  ],
-                )),
-                // Gold EMV chip rectangle
-                Container(
-                  width: 34,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.goldCard, AppColors.gold],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            data.number,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                              letterSpacing: 2.0,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(5),
+                    // Gold EMV chip rectangle
+                    Container(
+                      width: 34,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.goldCard, AppColors.gold],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Credit Limit row
+                _CCRow(
+                  label: 'Credit Limit',
+                  value: data.limit,
+                  valueColor: Colors.white,
+                ),
+                const SizedBox(height: 7),
+
+                // Amount Used row
+                _CCRow(
+                  label: 'Amount Used',
+                  value: '${data.used} ${data.usedPct}',
+                  valueColor: AppColors.goldCard,
+                ),
+                const SizedBox(height: 10),
+
+                // Usage bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: Container(
+                    height: 5,
+                    width: double.infinity,
+                    color: Colors.white.withOpacity(0.15),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: data.usageFactor,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.goldLight, AppColors.goldCard],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // Stats row
+                Row(
+                  children: [
+                    _CCStat(
+                      label: 'Due Date',
+                      value: data.dueDate,
+                      color: Colors.white,
+                    ),
+                    _CCStat(
+                      label: 'Min. Due',
+                      value: data.minDue,
+                      color: Colors.white,
+                    ),
+                    _CCStat(
+                      label: 'Rewards',
+                      value: data.rewards,
+                      color: AppColors.greenLight,
+                    ),
+                  ],
                 ),
               ],
             ),
-
-            const SizedBox(height: 20),
-
-            // Credit Limit row
-            _CCRow(label: 'Credit Limit', value: data.limit, valueColor: Colors.white),
-            const SizedBox(height: 7),
-
-            // Amount Used row
-            _CCRow(
-              label: 'Amount Used',
-              value: '${data.used} ${data.usedPct}',
-              valueColor: AppColors.goldCard,
-            ),
-            const SizedBox(height: 10),
-
-            // Usage bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: Container(
-                height: 5,
-                width: double.infinity,
-                color: Colors.white.withOpacity(0.15),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: data.usageFactor,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(colors: [AppColors.goldLight, AppColors.goldCard]),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 18),
-
-            // Stats row
-            Row(children: [
-              _CCStat(label: 'Due Date', value: data.dueDate, color: Colors.white),
-              _CCStat(label: 'Min. Due', value: data.minDue, color: Colors.white),
-              _CCStat(label: 'Rewards', value: data.rewards, color: AppColors.greenLight),
-            ]),
-          ]),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -1248,17 +1556,31 @@ class _CCCard extends StatelessWidget {
 class _CCRow extends StatelessWidget {
   final String label, value;
   final Color valueColor;
-  const _CCRow({required this.label, required this.value, required this.valueColor});
+  const _CCRow({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
   @override
   Widget build(BuildContext context) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text(label, style: const TextStyle(
-        color: Colors.white60, fontSize: 12, fontWeight: FontWeight.w500,
-      )),
-      Text(value, style: TextStyle(
-        color: valueColor, fontSize: 12, fontWeight: FontWeight.w700,
-      )),
+      Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white60,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      Text(
+        value,
+        style: TextStyle(
+          color: valueColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     ],
   );
 }
@@ -1266,17 +1588,34 @@ class _CCRow extends StatelessWidget {
 class _CCStat extends StatelessWidget {
   final String label, value;
   final Color color;
-  const _CCStat({required this.label, required this.value, required this.color});
+  const _CCStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   @override
   Widget build(BuildContext context) => Expanded(
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(
-        color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w600,
-      )),
-      const SizedBox(height: 3),
-      Text(value, style: TextStyle(
-        color: color, fontSize: 13, fontWeight: FontWeight.w800,
-      )),
-    ]),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
   );
 }
